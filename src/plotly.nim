@@ -112,10 +112,12 @@ when not defined(js):
   proc save*(p: SomePlot, path = "", html_template = defaultTmplString, filename = ""): string =
     result = path
     if result == "":
-      when defined(Windows):
-        result = getEnv("TEMP") / "x.html"
-      else:
-        result = "/tmp/x.html"
+      let dir = getTempDir() / "nimplotly"
+      createDir dir
+      # TODO: this unlikely to conflict with other applications but should
+      # implement https://github.com/brentp/nim-plotly/issues/20
+      # to avoid interference with multiple instances of this library
+      result = dir / "D20190125T182937.html"
 
     when type(p) is Plot:
       # convert traces to data suitable for plotly and fill Html template
@@ -123,13 +125,7 @@ when not defined(js):
     else:
       let data_string = $p.traces
     let html = html_template.fillHtmlTemplate(data_string, p, filename)
-
-    var
-      f: File
-    if not open(f, result, fmWrite):
-      quit "could not open file for json"
-    f.write(html)
-    f.close()
+    writeFile(result, html)
 
   when not hasThreadSupport:
     # some violation of DRY for the sake of better error messages at
@@ -147,9 +143,7 @@ when not defined(js):
       let tmpfile = p.save(path, html_template)
 
       showPlot(tmpfile)
-      sleep(1000)
-      ## remove file after thread is finished
-      removeFile(tmpfile)
+      # todo: garbage collect `tmpfile`, see https://github.com/brentp/nim-plotly/issues/20
 
     proc saveImage*(p: SomePlot, filename: string) =
       {.fatal: "`saveImage` only supported if compiled with --threads:on!".}
@@ -171,7 +165,7 @@ when not defined(js):
       if filename.len > 0:
         # wait for thread to join
         thr.joinThread
-      removeFile(tmpfile)
+      # todo: garbage collect `tmpfile`, see https://github.com/brentp/nim-plotly/issues/20
 
     proc saveImage*(p: SomePlot, filename: string) =
       ## saves the image under the given filename

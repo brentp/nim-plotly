@@ -1,20 +1,35 @@
+proc removeComments(a: string): string=
+  ## removes lines starting with `#` (convenient; avoids having to use html comments when making edits)
+  for a in a.splitLines:
+    if a.strip.startsWith "#": continue
+    result.add a & "\n"
+
 const defaultTmplString = """
 <!DOCTYPE html>
 <html>
-	<head>
-		<meta charset="utf-8" />
-		<title>$title</title>
-		 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-	</head>
-	<body>
-		<div id="plot0"></div>
-		<script>
-			Plotly.newPlot('plot0', $data, $layout)
-                </script>
-                $saveImage
-	</body>
+  <head>
+    <meta charset="utf-8" />
+    <title>$title</title>
+     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  </head>
+  <body>
+    <div id="plot0"></div>
+    <script>
+        # TODO: this currently overrides size settings given in plots;
+        # need to expose whether to autoresize or not
+        # Note: this didn't seem to work: Plotly.Plots.resize('plot0');
+        runRelayout = function() {
+          var margin = 50; // if 0, would introduce scrolling
+          Plotly.relayout('plot0', {width: window.innerWidth - margin, height: window.innerHeight - margin } );
+        };
+        window.onresize = runRelayout;
+       # Consider: {responsive: true}
+       Plotly.newPlot('plot0', $data, $layout).then(runRelayout);
+    </script>
+    $saveImage
+  </body>
 </html>
-"""
+""".removeComments
 
 # type needs to be inserted!
 # either
@@ -37,7 +52,7 @@ const injectImageCode = """
           // need to wait a short while to be sure the promise is fullfilled (I believe?!)
           connection.send("connected")
           setTimeout(function(){ connection.send(imageData); }, 100);
-};
+        };
 </script>
 """
 
